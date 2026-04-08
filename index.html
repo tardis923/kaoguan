@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -223,6 +223,14 @@
             background-color: #16a085;
         }
         
+        .btn-delete {
+            background-color: #e74c3c;
+        }
+        
+        .btn-delete:hover {
+            background-color: #c0392b;
+        }
+        
         .auto-save-status {
             font-size: 12px;
             color: #7f8c8d;
@@ -337,6 +345,7 @@
             cursor: pointer;
             transition: all 0.2s;
             padding: 8px;
+            position: relative;
         }
         
         .teacher-drop-zone:hover {
@@ -371,6 +380,33 @@
             padding: 2px 8px;
             background-color: #e8f4fc;
             border-radius: 10px;
+        }
+        
+        .teacher-delete-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: rgba(231, 76, 60, 0.9);
+            color: white;
+            border: none;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+        
+        .teacher-drop-zone.filled:hover .teacher-delete-btn {
+            display: flex;
+        }
+        
+        .teacher-delete-btn:hover {
+            background-color: #c0392b;
+            transform: scale(1.1);
         }
         
         /* 右侧考官信息面板 */
@@ -655,6 +691,7 @@
                         <button id="preview-export" class="btn-small btn-preview">导出前预览</button>
                         <button id="backup-data" class="btn-small">备份数据</button>
                         <button id="restore-data" class="btn-small btn-restore">还原备份</button>
+                        <button id="delete-selected" class="btn-small btn-delete">删除选中考官</button>
                         <button id="clear-all" class="btn-small btn-clear">清空所有编排</button>
                     </div>
                     
@@ -794,6 +831,7 @@
         const importSubjectCountsBtn = document.getElementById('import-subject-counts');
         const backupDataBtn = document.getElementById('backup-data');
         const restoreDataBtn = document.getElementById('restore-data');
+        const deleteSelectedBtn = document.getElementById('delete-selected');
         const exportCsvBtn = document.getElementById('export-csv');
         const exportXlsxBtn = document.getElementById('export-xlsx');
         const exportTxtBtn = document.getElementById('export-txt');
@@ -1201,6 +1239,7 @@
                                     <div class="teacher-name">${examiner.name}</div>
                                     <div class="teacher-school">${examiner.school}</div>
                                 </div>
+                                <button class="teacher-delete-btn" data-examiner-id="${examinerId}" onclick="deleteExaminerFromCell(event, this)">×</button>
                             `;
                             
                             // 学科单元格显示：学科
@@ -1210,6 +1249,7 @@
                         teacherDropZone.className = 'teacher-drop-zone empty';
                         teacherDropZone.setAttribute('draggable', 'false');
                         teacherDropZone.removeAttribute('data-examiner-id');
+                        teacherDropZone.innerHTML = '拖拽考官到此';
                         teacherDropZone.textContent = '拖拽考官到此';
                         
                         subjectCell.textContent = '-';
@@ -1219,6 +1259,75 @@
             
             // 标记数据已被修改
             markDataModified();
+        }
+        
+        // 删除考官（从单元格删除）
+        function deleteExaminerFromCell(event, button) {
+            event.stopPropagation(); // 防止触发其他事件
+            
+            const examinerId = parseInt(button.getAttribute('data-examiner-id'));
+            if (!examinerId) return;
+            
+            if (confirm('确定要删除此考官吗？')) {
+                // 找到考官所在的位置
+                examRooms.forEach(room => {
+                    const index = room.examiners.indexOf(examinerId);
+                    if (index !== -1) {
+                        room.examiners[index] = null;
+                    }
+                });
+                
+                // 更新考官状态
+                const examiner = getExaminerById(examinerId);
+                if (examiner) {
+                    examiner.assigned = false;
+                }
+                
+                // 更新UI
+                updateExamTable();
+                updateExaminerList();
+                updateAssignedExaminerList();
+                
+                alert('考官已删除！');
+            }
+        }
+        
+        // 删除选中考官
+        function deleteSelectedExaminers() {
+            const selectedExaminers = [];
+            
+            // 收集所有被选中的考官
+            examRooms.forEach(room => {
+                room.examiners.forEach(examinerId => {
+                    if (examinerId) {
+                        selectedExaminers.push(examinerId);
+                    }
+                });
+            });
+            
+            if (selectedExaminers.length === 0) {
+                alert('当前没有已编排的考官可删除！');
+                return;
+            }
+            
+            if (confirm(`确定要删除所有已编排的考官吗？共 ${selectedExaminers.length} 位考官将被删除。`)) {
+                // 清空所有考场的考官
+                examRooms.forEach(room => {
+                    room.examiners = room.examiners.map(() => null);
+                });
+                
+                // 更新所有考官状态
+                examiners.forEach(examiner => {
+                    examiner.assigned = false;
+                });
+                
+                // 更新UI
+                updateExamTable();
+                updateExaminerList();
+                updateAssignedExaminerList();
+                
+                alert(`已成功删除 ${selectedExaminers.length} 位考官！`);
+            }
         }
         
         // 拖拽考官开始
@@ -1982,6 +2091,7 @@
         
         backupDataBtn.addEventListener('click', backupData);
         restoreDataBtn.addEventListener('click', restoreBackupData);
+        deleteSelectedBtn.addEventListener('click', deleteSelectedExaminers);
         exportCsvBtn.addEventListener('click', exportToCSV);
         exportXlsxBtn.addEventListener('click', exportToXLSX);
         exportTxtBtn.addEventListener('click', exportToTXT);
@@ -2060,7 +2170,7 @@
             }
         });
         
-               // 初始化
+        // 初始化
         document.addEventListener('DOMContentLoaded', function() {
             // 初始时没有数据
             examiners = [];
@@ -2094,5 +2204,3 @@
     </script>
 </body>
 </html>
-
-
