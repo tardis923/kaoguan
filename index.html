@@ -223,11 +223,11 @@
             background-color: #16a085;
         }
         
-        .btn-delete {
+        .btn-danger {
             background-color: #e74c3c;
         }
         
-        .btn-delete:hover {
+        .btn-danger:hover {
             background-color: #c0392b;
         }
         
@@ -455,6 +455,7 @@
             margin-top: 10px;
         }
         
+        /* 未编排考官样式 - 默认状态 */
         .examiner-item {
             background-color: #f8f9fa;
             border: 1px solid #e9ecef;
@@ -463,13 +464,37 @@
             margin-bottom: 10px;
             cursor: move;
             transition: all 0.2s;
+            position: relative;
+        }
+        
+        /* 已编排考官样式 - 绿色背景 */
+        .examiner-item.assigned {
+            background-color: #e8f5e9;
+            border-color: #c8e6c9;
+        }
+        
+        /* 禁用考官样式 - 红色背景 */
+        .examiner-item.disabled {
+            background-color: #ffebee;
+            border-color: #ffcdd2;
+            cursor: not-allowed;
         }
         
         .examiner-item:hover {
-            background-color: #e3f2fd;
-            border-color: #bbdefb;
             transform: translateY(-2px);
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .examiner-item.assigned:hover {
+            background-color: #d7f0d9;
+            border-color: #b8e0bb;
+        }
+        
+        .examiner-item.disabled:hover {
+            background-color: #ffebee;
+            border-color: #ffcdd2;
+            transform: none;
+            box-shadow: none;
         }
         
         .examiner-item.dragging {
@@ -500,12 +525,74 @@
             font-weight: 600;
         }
         
+        .examiner-item.assigned .examiner-subject-badge {
+            background-color: #d7f0d9;
+            color: #2e7d32;
+        }
+        
+        .examiner-item.disabled .examiner-subject-badge {
+            background-color: #ffcdd2;
+            color: #c62828;
+        }
+        
         .examiner-details {
             font-size: 12px;
             color: #7f8c8d;
             display: flex;
             flex-direction: column;
             gap: 2px;
+        }
+        
+        .examiner-room-number {
+            position: absolute;
+            bottom: 5px;
+            right: 8px;
+            font-size: 16px;
+            color: #666;
+            font-weight: bold;
+            background-color: rgba(0, 0, 0, 0.05);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .examiner-item.assigned .examiner-room-number {
+            background-color: rgba(46, 125, 50, 0.1);
+            color: #2e7d32;
+        }
+        
+        .examiner-item.disabled .examiner-room-number {
+            background-color: rgba(198, 40, 40, 0.1);
+            color: #c62828;
+        }
+        
+        .examiner-toggle-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: none;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+        }
+        
+        .examiner-toggle-btn.disable-btn {
+            background-color: #e74c3c;
+            color: white;
+        }
+        
+        .examiner-toggle-btn.enable-btn {
+            background-color: #2ecc71;
+            color: white;
+        }
+        
+        .examiner-toggle-btn:hover {
+            transform: scale(1.1);
         }
         
         /* 已编排考官筛选 */
@@ -688,6 +775,8 @@
                     <div class="btn-group">
                         <button id="import-examiners" class="btn-small btn-import">导入考官数据</button>
                         <button id="import-subject-counts" class="btn-small btn-import">导入学科人数</button>
+                        <button id="clear-examiners" class="btn-small btn-danger">清空考官信息库</button>
+                        <button id="clear-subject-counts" class="btn-small btn-danger">清空学科人数</button>
                         <button id="preview-export" class="btn-small btn-preview">导出前预览</button>
                         <button id="backup-data" class="btn-small">备份数据</button>
                         <button id="restore-data" class="btn-small btn-restore">还原备份</button>
@@ -830,7 +919,8 @@
         const importSubjectCountsBtn = document.getElementById('import-subject-counts');
         const backupDataBtn = document.getElementById('backup-data');
         const restoreDataBtn = document.getElementById('restore-data');
-        const deleteSelectedBtn = document.getElementById('delete-selected');
+        const clearExaminersBtn = document.getElementById('clear-examiners');
+        const clearSubjectCountsBtn = document.getElementById('clear-subject-counts');
         const exportCsvBtn = document.getElementById('export-csv');
         const exportXlsxBtn = document.getElementById('export-xlsx');
         const exportTxtBtn = document.getElementById('export-txt');
@@ -877,6 +967,8 @@
                         period: parts[4] || "",
                         gender: parts[5] || "",
                         assigned: false,
+                        disabled: false, // 新增：禁用状态
+                        assignedRoom: null, // 新增：被编排的考场号
                         area: extractAreaFromSchool(parts[1] || "") // 提取县区信息
                     };
                     newExaminers.push(examiner);
@@ -1031,6 +1123,18 @@
             }
         }
         
+        // 查找考官被编排的考场号
+        function findExaminerRoom(examinerId) {
+            for (let room of examRooms) {
+                for (let i = 0; i < room.examiners.length; i++) {
+                    if (room.examiners[i] === examinerId) {
+                        return room.id;
+                    }
+                }
+            }
+            return null;
+        }
+        
         // 更新考官列表显示
         function updateExaminerList() {
             const subjectFilterValue = subjectFilter.value;
@@ -1060,6 +1164,7 @@
             const total = examiners.length;
             const assigned = examiners.filter(e => e.assigned).length;
             const unassigned = total - assigned;
+            const disabled = examiners.filter(e => e.disabled).length;
             
             examinerCount.textContent = `${total} 位`;
             unassignedCount.textContent = `未分配: ${unassigned}`;
@@ -1073,12 +1178,28 @@
             
             let html = '';
             filteredExaminers.forEach(examiner => {
+                // 查找考官被编排的考场号
+                const roomNumber = findExaminerRoom(examiner.id);
+                examiner.assignedRoom = roomNumber;
+                
                 const assignedClass = examiner.assigned ? 'assigned' : '';
+                const disabledClass = examiner.disabled ? 'disabled' : '';
+                const toggleBtnClass = examiner.disabled ? 'enable-btn' : 'disable-btn';
+                const toggleBtnText = examiner.disabled ? '✓' : '×';
+                const toggleBtnTitle = examiner.disabled ? '点击启用考官' : '点击禁用考官';
+                const roomNumberText = roomNumber ? `考场${roomNumber}` : '';
+                
                 html += `
-                    <div class="examiner-item ${assignedClass}" 
-                         draggable="true" 
+                    <div class="examiner-item ${assignedClass} ${disabledClass}" 
                          data-id="${examiner.id}"
-                         ondragstart="dragExaminerStart(event)">
+                         ondragstart="${examiner.disabled ? '' : 'dragExaminerStart(event)'}"
+                         ${examiner.disabled ? '' : 'draggable="true"'}>
+                        <button class="examiner-toggle-btn ${toggleBtnClass}" 
+                                onclick="toggleExaminerStatus(event, ${examiner.id})"
+                                title="${toggleBtnTitle}">
+                            ${toggleBtnText}
+                        </button>
+                        ${roomNumber ? `<span class="examiner-room-number" title="被编排的考场号">${roomNumberText}</span>` : ''}
                         <div class="examiner-main">
                             <div class="examiner-name">${examiner.name} (${examiner.gender})</div>
                             <div class="examiner-subject-badge">${examiner.subject}</div>
@@ -1133,6 +1254,34 @@
             });
             
             assignedExaminerList.innerHTML = html;
+        }
+        
+        // 切换考官禁用状态
+        function toggleExaminerStatus(event, examinerId) {
+            event.stopPropagation();
+            
+            const examiner = getExaminerById(examinerId);
+            if (!examiner) return;
+            
+            // 直接切换状态，不再显示确认弹窗
+            examiner.disabled = !examiner.disabled;
+            
+            // 如果禁用了已分配的考官，需要将其从编排中移除
+            if (examiner.disabled && examiner.assigned) {
+                examRooms.forEach(room => {
+                    const index = room.examiners.indexOf(examinerId);
+                    if (index !== -1) {
+                        room.examiners[index] = null;
+                    }
+                });
+                examiner.assigned = false;
+                examiner.assignedRoom = null;
+            }
+            
+            // 更新UI
+            updateExamTable();
+            updateExaminerList();
+            updateAssignedExaminerList();
         }
         
         // 根据ID获取考官信息
@@ -1249,7 +1398,6 @@
                         teacherDropZone.setAttribute('draggable', 'false');
                         teacherDropZone.removeAttribute('data-examiner-id');
                         teacherDropZone.innerHTML = '拖拽考官到此';
-                        teacherDropZone.textContent = '拖拽考官到此';
                         
                         subjectCell.textContent = '-';
                     }
@@ -1280,6 +1428,7 @@
                 const examiner = getExaminerById(examinerId);
                 if (examiner) {
                     examiner.assigned = false;
+                    examiner.assignedRoom = null;
                 }
                 
                 // 更新UI
@@ -1291,42 +1440,165 @@
             }
         }
         
-        // 删除选中考官
-        function deleteSelectedExaminers() {
-            const selectedExaminers = [];
-            
-            // 收集所有被选中的考官
-            examRooms.forEach(room => {
-                room.examiners.forEach(examinerId => {
-                    if (examinerId) {
-                        selectedExaminers.push(examinerId);
-                    }
-                });
-            });
-            
-            if (selectedExaminers.length === 0) {
-                alert('当前没有已编排的考官可删除！');
+        // 清空所有编排
+        function clearAllAssignments() {
+            if (!confirm('确定要清空所有考场的编排吗？此操作不可撤销。')) {
                 return;
             }
             
-            if (confirm(`确定要删除所有已编排的考官吗？共 ${selectedExaminers.length} 位考官将被删除。`)) {
-                // 清空所有考场的考官
+            examRooms.forEach(room => {
+                room.examiners = room.examiners.map(() => null);
+            });
+            
+            examiners.forEach(examiner => {
+                examiner.assigned = false;
+                examiner.assignedRoom = null;
+            });
+            
+            assignedExaminers.clear();
+            
+            // 更新UI
+            updateExamTable();
+            updateExaminerList();
+            updateAssignedExaminerList();
+        }
+        
+        // 清空考官信息库
+        function clearExaminers() {
+            if (examiners.length === 0) {
+                alert('考官信息库已为空！');
+                return;
+            }
+            
+            if (confirm('确定要清空所有考官信息吗？此操作将删除所有考官数据，包括已编排的考官。')) {
+                examiners = [];
+                nextExaminerId = 1;
+                assignedExaminers.clear();
+                
+                // 清空所有考场的编排
                 examRooms.forEach(room => {
                     room.examiners = room.examiners.map(() => null);
                 });
                 
-                // 更新所有考官状态
-                examiners.forEach(examiner => {
-                    examiner.assigned = false;
-                });
+                // 更新筛选器
+                updateSubjectFilter();
+                updateAreaFilter();
+                updateSchoolFilter();
                 
                 // 更新UI
                 updateExamTable();
                 updateExaminerList();
                 updateAssignedExaminerList();
                 
-                alert(`已成功删除 ${selectedExaminers.length} 位考官！`);
+                alert('考官信息库已清空！');
             }
+        }
+        
+        // 清空学科人数信息
+        function clearSubjectCounts() {
+            if (Object.keys(subjectCounts).length === 0) {
+                alert('学科人数信息已为空！');
+                return;
+            }
+            
+            if (confirm('确定要清空所有学科人数信息吗？此操作将删除所有考场的学科人数数据。')) {
+                subjectCounts = {};
+                
+                // 更新UI
+                updateExamTable();
+                
+                alert('学科人数信息已清空！');
+            }
+        }
+        
+        // 备份数据
+        function backupData() {
+            const data = {
+                examiners: examiners,
+                examRooms: examRooms,
+                subjectCounts: subjectCounts,
+                backupTime: new Date().toLocaleString('zh-CN')
+            };
+            
+            // 保存备份数据用于还原
+            lastBackupData = data;
+            
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const downloadLink = document.createElement('a');
+            downloadLink.href = URL.createObjectURL(dataBlob);
+            downloadLink.download = `考官编排备份_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            alert('数据备份成功！备份数据已保存，可使用"还原备份"功能恢复。');
+        }
+        
+        // 还原备份数据
+        function restoreBackupData() {
+            if (!lastBackupData) {
+                if (confirm('没有找到备份数据，是否从文件还原？')) {
+                    fileInputRestore.click();
+                }
+                return;
+            }
+            
+            if (confirm('确定要还原备份数据吗？当前未保存的修改将会丢失。')) {
+                restoreDataFromObject(lastBackupData);
+                alert('备份数据还原成功！');
+            }
+        }
+        
+        // 从文件还原备份数据
+        function restoreBackupFromFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    restoreDataFromObject(data);
+                    lastBackupData = data;
+                    alert('备份文件还原成功！');
+                } catch (error) {
+                    alert('还原失败：文件格式不正确');
+                }
+            };
+            
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        // 从数据对象还原
+        function restoreDataFromObject(data) {
+            examiners = data.examiners || [];
+            examRooms = data.examRooms || [];
+            subjectCounts = data.subjectCounts || {};
+            
+            // 更新下一个考官ID
+            if (examiners.length > 0) {
+                nextExaminerId = Math.max(...examiners.map(e => e.id)) + 1;
+            }
+            
+            // 更新筛选器
+            updateSubjectFilter();
+            updateAreaFilter();
+            updateSchoolFilter();
+            
+            // 更新UI
+            updateExaminerList();
+            updateAssignedExaminerList();
+            
+            // 重建表格
+            if (examRooms.length > 0) {
+                currentRoomCount = examRooms.length;
+                roomCountInput.value = currentRoomCount;
+                rebuildExamTable();
+            } else {
+                initExamTable(currentRoomCount);
+            }
+            
+            // 重置修改状态
+            isDataModified = false;
         }
         
         // 拖拽考官开始
@@ -1340,6 +1612,14 @@
                               target.getAttribute('data-examiner-id');
             
             if (examinerId) {
+                const examiner = getExaminerById(parseInt(examinerId));
+                
+                // 检查考官是否被禁用
+                if (examiner && examiner.disabled) {
+                    event.preventDefault();
+                    return;
+                }
+                
                 event.dataTransfer.setData('examinerId', examinerId);
                 event.dataTransfer.setData('dragType', 'examiner');
                 
@@ -1436,6 +1716,11 @@
             const examiner = getExaminerById(examinerId);
             if (!examiner) return;
             
+            // 检查考官是否被禁用
+            if (examiner.disabled) {
+                return;
+            }
+            
             const targetRoom = examRooms.find(r => r.id === targetRoomId);
             if (!targetRoom) return;
             
@@ -1468,6 +1753,7 @@
                 // 将考官分配到目标位置
                 targetRoom.examiners[targetSlotIndex] = examinerId;
                 examiner.assigned = true;
+                examiner.assignedRoom = targetRoomId;
                 
                 // 更新UI
                 updateExamTable();
@@ -1491,8 +1777,12 @@
                         const targetExaminer = getExaminerById(targetExaminerId);
                         if (targetExaminer) {
                             targetExaminer.assigned = true;
+                            targetExaminer.assignedRoom = targetRoomId;
                         }
                     }
+                    
+                    // 更新当前考官的考场号
+                    examiner.assignedRoom = targetRoomId;
                     
                     // 更新UI
                     updateExamTable();
@@ -1562,6 +1852,9 @@
                 // 重新生成表格
                 rebuildExamTable();
                 
+                // 更新已编排考官的考场号
+                updateAllAssignedRoomNumbers();
+                
                 // 标记数据已被修改
                 markDataModified();
             }
@@ -1569,6 +1862,18 @@
             // 移除行拖拽效果
             const rows = document.querySelectorAll('#exam-table-body tr');
             rows.forEach(row => row.style.opacity = '');
+        }
+        
+        // 更新所有已编排考官的考场号
+        function updateAllAssignedRoomNumbers() {
+            examiners.forEach(examiner => {
+                if (examiner.assigned) {
+                    examiner.assignedRoom = findExaminerRoom(examiner.id);
+                }
+            });
+            
+            // 更新UI
+            updateExaminerList();
         }
         
         // 重新生成表格（保持考场顺序）
@@ -1634,118 +1939,6 @@
             
             // 更新表格内容
             updateExamTable();
-        }
-        
-        // 清空所有编排
-        function clearAllAssignments() {
-            if (!confirm('确定要清空所有考场的编排吗？此操作不可撤销。')) {
-                return;
-            }
-            
-            examRooms.forEach(room => {
-                room.examiners = room.examiners.map(() => null);
-            });
-            
-            examiners.forEach(examiner => {
-                examiner.assigned = false;
-            });
-            
-            assignedExaminers.clear();
-            
-            // 更新UI
-            updateExamTable();
-            updateExaminerList();
-            updateAssignedExaminerList();
-        }
-        
-        // 备份数据
-        function backupData() {
-            const data = {
-                examiners: examiners,
-                examRooms: examRooms,
-                subjectCounts: subjectCounts,
-                backupTime: new Date().toLocaleString('zh-CN')
-            };
-            
-            // 保存备份数据用于还原
-            lastBackupData = data;
-            
-            const dataStr = JSON.stringify(data, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            
-            const downloadLink = document.createElement('a');
-            downloadLink.href = URL.createObjectURL(dataBlob);
-            downloadLink.download = `考官编排备份_${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-            
-            alert('数据备份成功！备份数据已保存，可使用"还原备份"功能恢复。');
-        }
-        
-        // 还原备份数据
-        function restoreBackupData() {
-            if (!lastBackupData) {
-                if (confirm('没有找到备份数据，是否从文件还原？')) {
-                    fileInputRestore.click();
-                }
-                return;
-            }
-            
-            if (confirm('确定要还原备份数据吗？当前未保存的修改将会丢失。')) {
-                restoreDataFromObject(lastBackupData);
-                alert('备份数据还原成功！');
-            }
-        }
-        
-        // 从文件还原备份数据
-        function restoreBackupFromFile(file) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    restoreDataFromObject(data);
-                    lastBackupData = data;
-                    alert('备份文件还原成功！');
-                } catch (error) {
-                    alert('还原失败：文件格式不正确');
-                }
-            };
-            
-            reader.readAsText(file, 'UTF-8');
-        }
-        
-        // 从数据对象还原
-        function restoreDataFromObject(data) {
-            examiners = data.examiners || [];
-            examRooms = data.examRooms || [];
-            subjectCounts = data.subjectCounts || {};
-            
-            // 更新下一个考官ID
-            if (examiners.length > 0) {
-                nextExaminerId = Math.max(...examiners.map(e => e.id)) + 1;
-            }
-            
-            // 更新筛选器
-            updateSubjectFilter();
-            updateAreaFilter();
-            updateSchoolFilter();
-            
-            // 更新UI
-            updateExaminerList();
-            updateAssignedExaminerList();
-            
-            // 重建表格
-            if (examRooms.length > 0) {
-                currentRoomCount = examRooms.length;
-                roomCountInput.value = currentRoomCount;
-                rebuildExamTable();
-            } else {
-                initExamTable(currentRoomCount);
-            }
-            
-            // 重置修改状态
-            isDataModified = false;
         }
         
         // 标记数据被修改
@@ -2090,7 +2283,8 @@
         
         backupDataBtn.addEventListener('click', backupData);
         restoreDataBtn.addEventListener('click', restoreBackupData);
-        deleteSelectedBtn.addEventListener('click', deleteSelectedExaminers);
+        clearExaminersBtn.addEventListener('click', clearExaminers);
+        clearSubjectCountsBtn.addEventListener('click', clearSubjectCounts);
         exportCsvBtn.addEventListener('click', exportToCSV);
         exportXlsxBtn.addEventListener('click', exportToXLSX);
         exportTxtBtn.addEventListener('click', exportToTXT);
