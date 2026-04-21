@@ -1063,17 +1063,50 @@
             isDataModified = false;
         }
         
-        function dragExaminerStart(event) {
-            const t = event.target.classList.contains('teacher-drop-zone') ? event.target : event.target.closest('.teacher-drop-zone, .examiner-item');
-            if (!t) return;
-            const id = t.getAttribute('data-id') || t.getAttribute('data-examiner-id');
-            if (!id) return;
-            const examiner = getExaminerById(+id);
-            if (examiner?.disabled) { event.preventDefault(); return; }
-            event.dataTransfer.setData('examinerId', id); event.dataTransfer.setData('dragType', 'examiner');
-            if (t.classList.contains('teacher-drop-zone')) { event.dataTransfer.setData('sourceRoomId', t.getAttribute('data-room-id')); event.dataTransfer.setData('sourceSlotIndex', t.getAttribute('data-slot-index')); }
-            t.classList.add('dragging');
+       function dragExaminerStart(event) {
+    event.stopPropagation();
+
+    // ✅ 情况 1：从安排表中拖拽「已编排考官」
+    const filledDropZone = event.target.closest('.teacher-drop-zone.filled');
+    if (filledDropZone) {
+        const examinerId = filledDropZone.getAttribute('data-examiner-id');
+        const examiner = getExaminerById(+examinerId);
+
+        if (!examiner || examiner.disabled) {
+            event.preventDefault();
+            return;
         }
+
+        event.dataTransfer.setData('examinerId', examinerId);
+        event.dataTransfer.setData('dragType', 'examiner');
+        event.dataTransfer.setData('sourceRoomId', filledDropZone.getAttribute('data-room-id'));
+        event.dataTransfer.setData('sourceSlotIndex', filledDropZone.getAttribute('data-slot-index'));
+
+        filledDropZone.classList.add('dragging');
+        return;
+    }
+
+    // ✅ 情况 2：从右侧考官库拖拽「未编排考官」
+    const examinerItem = event.target.closest('.examiner-item');
+    if (examinerItem && !examinerItem.classList.contains('assigned')) {
+        const examinerId = examinerItem.getAttribute('data-id');
+        const examiner = getExaminerById(+examinerId);
+
+        if (!examiner || examiner.disabled) {
+            event.preventDefault();
+            return;
+        }
+
+        event.dataTransfer.setData('examinerId', examinerId);
+        event.dataTransfer.setData('dragType', 'examiner');
+
+        examinerItem.classList.add('dragging');
+        return;
+    }
+
+    // ❌ 其他情况一律禁止
+    event.preventDefault();
+}
         
         function dragRoomStart(event) {
             const cell = event.target;
