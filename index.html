@@ -757,7 +757,7 @@
                 { name: '珠山区', keyword: '珠山区' },
                 { name: '昌江区', keyword: '昌江区' },
                 { name: '浮梁县', keyword: '浮梁县' },
-                { name: '乐平市', keyword: '乐平市' }
+                { name: '乐平', keyword: '乐平' }
             ];
 
             const assigned = examiners.filter(e => e.assigned);
@@ -988,16 +988,31 @@
         }
         
         function deleteExaminerFromCell(event, btn) {
-            event.stopPropagation();
-            const id = parseInt(btn.getAttribute('data-examiner-id'));
-            if (!id) return;
-            if (confirm('确定要删除此考官吗？')) {
-                examRooms.forEach(room => { const idx = room.examiners.indexOf(id); if (idx !== -1) room.examiners[idx] = null; });
-                const examiner = getExaminerById(id);
-                if (examiner) { examiner.assigned = false; examiner.assignedRoom = null; }
-                refreshAllUI();
-            }
+    event.stopPropagation();
+    event.preventDefault();
+
+    // ✅ 从 drop-zone 取 examiner-id
+    const dropZone = btn.closest('.teacher-drop-zone');
+    if (!dropZone) return;
+
+    const id = parseInt(dropZone.getAttribute('data-examiner-id'));
+    if (!id) return;
+
+    if (confirm('确定要删除此考官吗？')) {
+        examRooms.forEach(room => {
+            const idx = room.examiners.indexOf(id);
+            if (idx !== -1) room.examiners[idx] = null;
+        });
+
+        const examiner = getExaminerById(id);
+        if (examiner) {
+            examiner.assigned = false;
+            examiner.assignedRoom = null;
         }
+
+        refreshAllUI();
+    }
+}
         
         function clearAllAssignments() {
             if (!confirm('确定要清空所有考场的编排吗？此操作不可撤销。')) return;
@@ -1090,9 +1105,16 @@
             event.preventDefault(); removeHoverEffects();
             const targetRow = event.target.closest('tr'); if (!targetRow || event.dataTransfer.getData('dragType') !== 'room') return;
             const srcId = +event.dataTransfer.getData('roomId'); const tgtId = +targetRow.getAttribute('data-room-id'); if (!srcId || srcId === tgtId) return;
-            const srcIdx = examRooms.findIndex(r => r.id === srcId); const tgtIdx = examRooms.findIndex(r => r.id === tgtId); if (srcIdx === -1 || tgtIdx === -1) return;
-            [examRooms[srcIdx], examRooms[tgtIdx]] = [examRooms[tgtIdx], examRooms[srcIdx]];
-            [subjectCounts[srcId], subjectCounts[tgtId]] = [subjectCounts[tgtId], subjectCounts[srcId]];
+            const srcIdx = examRooms.findIndex(r => r.id === srcId); const tgtIdx = examRooms.findIndex(r => r.id === tgtId);
+ if (srcIdx === -1 || tgtIdx === -1) return;
+            [examRooms[srcIdx], examRooms[tgtIdx]] =
+[examRooms[tgtIdx], examRooms[srcIdx]];
+
+[examRooms[srcIdx].examiners, examRooms[tgtIdx].examiners] =
+[examRooms[tgtIdx].examiners, examRooms[srcIdx].examiners];
+
+[subjectCounts[srcId], subjectCounts[tgtId]] =
+[subjectCounts[tgtId], subjectCounts[srcId]];
             rebuildExamTable(); updateAllAssignedRoomNumbers(); markDataModified();
         }
         
