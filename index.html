@@ -629,20 +629,12 @@
                 
                 <!-- ✅ 学科关键字搜索 -->
                 <div class="control-section">
-                    <label class="control-label">搜索学科关键字</label>
-                    <div class="search-box">
-                        <input type="text" id="subject-keyword-search" placeholder="如：音、体、英...">
-                        <span class="search-icon">🔍</span>
-                    </div>
-                </div>
-                
-                <div class="control-section">
-                    <label class="control-label">搜索考官姓名</label>
-                    <div class="search-box">
-                        <input type="text" id="name-search" placeholder="输入考官姓名...">
-                        <span class="search-icon">🔍</span>
-                    </div>
-                </div>
+    <label class="control-label">搜索考官（姓名 / 单位 / 学科）</label>
+    <div class="search-box">
+        <input type="text" id="combined-search" placeholder="输入姓名、单位或学科关键字...">
+        <span class="search-icon">🔍</span>
+    </div>
+</div>
                 
                 <div class="assigned-filter">
                     <label class="filter-label">
@@ -705,7 +697,6 @@
         const clearAllBtn = document.getElementById('clear-all');
         const roomCountInput = document.getElementById('room-count');
         const updateRoomsBtn = document.getElementById('update-rooms');
-        const nameSearch = document.getElementById('name-search');
         const hideAssignedCheckbox = document.getElementById('hide-assigned');
         const examinerList = document.getElementById('examiner-list');
         const assignedExaminerSearchResult = document.getElementById('assigned-examiner-search-result');
@@ -719,7 +710,7 @@
         const autoSaveStatus = document.getElementById('auto-save-status');
         const autoSaveDot = document.getElementById('auto-save-dot');
         const autoSaveText = document.getElementById('auto-save-text');
-        const subjectKeywordSearch = document.getElementById('subject-keyword-search');
+        const combinedSearch = document.getElementById('combined-search');
         const assignedExaminerSearch = document.getElementById('assigned-examiner-search');
 
         // ✅ 统一刷新入口
@@ -887,45 +878,73 @@
         }
         
         function updateExaminerList() {
-            let filtered = examiners;
-            const keyword = subjectKeywordSearch ? subjectKeywordSearch.value.toLowerCase() : '';
-            const nameVal = nameSearch.value.toLowerCase();
-            const hideAssigned = hideAssignedCheckbox.checked;
-            
-            if (keyword) filtered = filtered.filter(e => e.subject && e.subject.toLowerCase().includes(keyword));
-            if (nameVal) filtered = filtered.filter(e => e.name.toLowerCase().includes(nameVal));
-            if (hideAssigned) filtered = filtered.filter(e => !e.assigned);
-            
-            const total = examiners.length;
-            const assigned = examiners.filter(e => e.assigned).length;
-            examinerCount.textContent = `${total} 位`;
-            unassignedCount.textContent = `未分配: ${total - assigned}`;
-            assignedCount.textContent = `已分配: ${assigned}`;
-            
-            if (filtered.length === 0) {
-                examinerList.innerHTML = '<div class="no-data-msg"><div class="icon">🔍</div><div>没有找到符合条件的考官</div></div>';
-                return;
-            }
-            
-            let html = '';
-            filtered.forEach(examiner => {
-                const roomNumber = findExaminerRoom(examiner.id);
-                examiner.assignedRoom = roomNumber;
-                const assignedClass = examiner.assigned ? 'assigned' : '';
-                const disabledClass = examiner.disabled ? 'disabled' : '';
-                const toggleClass = examiner.disabled ? 'enable-btn' : 'disable-btn';
-                const toggleText = examiner.disabled ? '✓' : '×';
-                const roomText = roomNumber ? `考场${roomNumber}` : '';
-                
-                html += `<div class="examiner-item ${assignedClass} ${disabledClass}" data-id="${examiner.id}" ondragstart="${examiner.disabled ? '' : 'dragExaminerStart(event)'}" ${examiner.disabled ? '' : 'draggable="true"'}>
-                    <button class="examiner-toggle-btn ${toggleClass}" onclick="toggleExaminerStatus(event, ${examiner.id})">${toggleText}</button>
-                    ${roomText ? `<span class="examiner-room-number">${roomText}</span>` : ''}
-                    <div class="examiner-main"><div class="examiner-name">${examiner.name} (${examiner.gender})</div><div class="examiner-subject-badge">${examiner.subject}</div></div>
-                    <div class="examiner-details"><div>${examiner.school}</div><div>${examiner.phone} | ${examiner.period}期</div></div>
-                </div>`;
-            });
-            examinerList.innerHTML = html;
-        }
+    let filtered = examiners;
+
+    const keyword = combinedSearch
+        ? combinedSearch.value.trim().toLowerCase()
+        : '';
+
+    const hideAssigned = hideAssignedCheckbox.checked;
+
+    if (keyword) {
+        filtered = filtered.filter(examiner =>
+            (examiner.name && examiner.name.toLowerCase().includes(keyword)) ||
+            (examiner.school && examiner.school.toLowerCase().includes(keyword)) ||
+            (examiner.subject && examiner.subject.toLowerCase().includes(keyword))
+        );
+    }
+
+    if (hideAssigned) {
+        filtered = filtered.filter(e => !e.assigned);
+    }
+
+    const total = examiners.length;
+    const assigned = examiners.filter(e => e.assigned).length;
+
+    examinerCount.textContent = `${total} 位`;
+    unassignedCount.textContent = `未分配: ${total - assigned}`;
+    assignedCount.textContent = `已分配: ${assigned}`;
+
+    if (filtered.length === 0) {
+        examinerList.innerHTML = '<div class="no-data-msg"><div class="icon">🔍</div><div>没有找到符合条件的考官</div></div>';
+        return;
+    }
+
+    let html = '';
+    filtered.forEach(examiner => {
+        const roomNumber = findExaminerRoom(examiner.id);
+        examiner.assignedRoom = roomNumber;
+
+        const assignedClass = examiner.assigned ? 'assigned' : '';
+        const disabledClass = examiner.disabled ? 'disabled' : '';
+        const toggleClass = examiner.disabled ? 'enable-btn' : 'disable-btn';
+        const toggleText = examiner.disabled ? '✓' : '×';
+        const roomText = roomNumber ? `考场${roomNumber}` : '';
+
+        html += `
+            <div class="examiner-item ${assignedClass} ${disabledClass}"
+                 data-id="${examiner.id}"
+                 ondragstart="${examiner.disabled ? '' : 'dragExaminerStart(event)'}"
+                 ${examiner.disabled ? '' : 'draggable="true"'}>
+                <button class="examiner-toggle-btn ${toggleClass}"
+                        onclick="toggleExaminerStatus(event, ${examiner.id})">
+                    ${toggleText}
+                </button>
+                ${roomText ? `<span class="examiner-room-number">${roomText}</span>` : ''}
+                <div class="examiner-main">
+                    <div class="examiner-name">${examiner.name} (${examiner.gender})</div>
+                    <div class="examiner-subject-badge">${examiner.subject}</div>
+                </div>
+                <div class="examiner-details">
+                    <div>${examiner.school}</div>
+                    <div>${examiner.phone} | ${examiner.period}期</div>
+                </div>
+            </div>
+        `;
+    });
+
+    examinerList.innerHTML = html;
+}
         
         function toggleExaminerStatus(event, examinerId) {
             event.stopPropagation();
@@ -1180,8 +1199,7 @@
         exportCsvBtn.onclick = exportToCSV; exportXlsxBtn.onclick = exportToXLSX; exportTxtBtn.onclick = exportToTXT; previewExportBtn.onclick = showExportPreview;
         clearAllBtn.onclick = clearAllAssignments; closePreviewBtn.onclick = () => previewModal.style.display = 'none'; previewModal.onclick = e => { if (e.target === previewModal) previewModal.style.display = 'none'; };
         updateRoomsBtn.onclick = () => { const c = +roomCountInput.value || 68; if (c < 1 || c > 100) return alert('考场数量需在 1–100 之间'); initExamTable(c); };
-        nameSearch.oninput = updateExaminerList; hideAssignedCheckbox.onchange = updateExaminerList; subjectKeywordSearch.oninput = updateExaminerList;
-        assignedExaminerSearch.oninput = performAssignedExaminerSearch;
+        combinedSearch.oninput = updateExaminerList; hideAssignedCheckbox.onchange = updateExaminerList;assignedExaminerSearch.oninput = performAssignedExaminerSearch;
         document.addEventListener('dragover', e => { if (e.target.closest('.teacher-drop-zone')) allowDrop(e); if (e.target.closest('tr')) allowRowDrop(e); });
         document.addEventListener('dragleave', removeHoverEffects); document.addEventListener('dragend', removeHoverEffects);
         autoSaveStatus.onclick = () => { autoSaveEnabled = !autoSaveEnabled; autoSaveDot.classList.toggle('inactive', !autoSaveEnabled); autoSaveText.textContent = autoSaveEnabled ? '自动保存已启用' : '自动保存已禁用'; };
