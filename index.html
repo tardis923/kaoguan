@@ -627,14 +627,14 @@
                     <span id="examiner-count">0 位</span>
                 </div>
                 
-                <!-- ✅ 学科关键字搜索 -->
+                <!-- ✅ 合并搜索框 -->
                 <div class="control-section">
-    <label class="control-label">搜索考官（姓名 / 单位 / 学科）</label>
-    <div class="search-box">
-        <input type="text" id="combined-search" placeholder="输入姓名、单位或学科关键字...">
-        <span class="search-icon">🔍</span>
-    </div>
-</div>
+                    <label class="control-label">搜索考官（姓名 / 单位 / 学科）</label>
+                    <div class="search-box">
+                        <input type="text" id="combined-search" placeholder="输入姓名、单位或学科关键字...">
+                        <span class="search-icon">🔍</span>
+                    </div>
+                </div>
                 
                 <div class="assigned-filter">
                     <label class="filter-label">
@@ -670,6 +670,7 @@
             <div id="preview-content"></div>
         </div>
     </div>
+
 <script>
         let examiners = [];
         let examRooms = [];
@@ -763,33 +764,25 @@
             container.innerHTML = html || '<div class="stat-row">暂无数据</div>';
         }
 
-        // ✅ 新增：市直单位统计
         function updateCityStats() {
-    const container = document.getElementById('city-stats-content');
-    if (!container) return;
+            const container = document.getElementById('city-stats-content');
+            if (!container) return;
 
-    // 筛选出已编排且单位包含“景德镇”的考官
-    const assigned = examiners.filter(e => e.assigned && e.school && e.school.includes('景德镇'));
-    
-    // 按学校名称去重并排序
-    const schools = [...new Set(assigned.map(e => e.school))].sort();
+            const assigned = examiners.filter(e => e.assigned && e.school && e.school.includes('景德镇'));
+            const schools = [...new Set(assigned.map(e => e.school))].sort();
 
-    let html = '';
-    schools.forEach(school => {
-        // 统计该单位的总人数
-        const total = assigned.filter(e => e.school === school).length;
-        
-        // 修改点：只显示单位和合计人数，移除男女统计
-        html += `<div class="stat-row">
-                    <span class="stat-area">${school}</span>
-                    <span class="stat-numbers">合计：${total} 人</span>
-                 </div>`;
-    });
-    
-    container.innerHTML = html || '<div class="stat-row">暂无数据</div>';
-}
+            let html = '';
+            schools.forEach(school => {
+                const total = assigned.filter(e => e.school === school).length;
+                html += `<div class="stat-row">
+                            <span class="stat-area">${school}</span>
+                            <span class="stat-numbers">合计：${total} 人</span>
+                         </div>`;
+            });
+            
+            container.innerHTML = html || '<div class="stat-row">暂无数据</div>';
+        }
 
-        // ✅ 新增：已编排考官搜索
         function performAssignedExaminerSearch() {
             const keyword = assignedExaminerSearch ? assignedExaminerSearch.value.toLowerCase() : '';
             let list = examiners.filter(e => e.assigned);
@@ -878,73 +871,73 @@
         }
         
         function updateExaminerList() {
-    let filtered = examiners;
+            let filtered = examiners;
 
-    const keyword = combinedSearch
-        ? combinedSearch.value.trim().toLowerCase()
-        : '';
+            const keyword = combinedSearch
+                ? combinedSearch.value.trim().toLowerCase()
+                : '';
 
-    const hideAssigned = hideAssignedCheckbox.checked;
+            const hideAssigned = hideAssignedCheckbox.checked;
 
-    if (keyword) {
-        filtered = filtered.filter(examiner =>
-            (examiner.name && examiner.name.toLowerCase().includes(keyword)) ||
-            (examiner.school && examiner.school.toLowerCase().includes(keyword)) ||
-            (examiner.subject && examiner.subject.toLowerCase().includes(keyword))
-        );
-    }
+            if (keyword) {
+                filtered = filtered.filter(examiner =>
+                    (examiner.name && examiner.name.toLowerCase().includes(keyword)) ||
+                    (examiner.school && examiner.school.toLowerCase().includes(keyword)) ||
+                    (examiner.subject && examiner.subject.toLowerCase().includes(keyword))
+                );
+            }
 
-    if (hideAssigned) {
-        filtered = filtered.filter(e => !e.assigned);
-    }
+            if (hideAssigned) {
+                filtered = filtered.filter(e => !e.assigned);
+            }
 
-    const total = examiners.length;
-    const assigned = examiners.filter(e => e.assigned).length;
+            const total = examiners.length;
+            const assigned = examiners.filter(e => e.assigned).length;
 
-    examinerCount.textContent = `${total} 位`;
-    unassignedCount.textContent = `未分配: ${total - assigned}`;
-    assignedCount.textContent = `已分配: ${assigned}`;
+            examinerCount.textContent = `${total} 位`;
+            unassignedCount.textContent = `未分配: ${total - assigned}`;
+            assignedCount.textContent = `已分配: ${assigned}`;
 
-    if (filtered.length === 0) {
-        examinerList.innerHTML = '<div class="no-data-msg"><div class="icon">🔍</div><div>没有找到符合条件的考官</div></div>';
-        return;
-    }
+            if (filtered.length === 0) {
+                examinerList.innerHTML = '<div class="no-data-msg"><div class="icon">🔍</div><div>没有找到符合条件的考官</div></div>';
+                return;
+            }
 
-    let html = '';
-    filtered.forEach(examiner => {
-        const roomNumber = findExaminerRoom(examiner.id);
-        examiner.assignedRoom = roomNumber;
+            let html = '';
+            filtered.forEach(examiner => {
+                const roomNumber = findExaminerRoom(examiner.id);
+                examiner.assignedRoom = roomNumber;
 
-        const assignedClass = examiner.assigned ? 'assigned' : '';
-        const disabledClass = examiner.disabled ? 'disabled' : '';
-        const toggleClass = examiner.disabled ? 'enable-btn' : 'disable-btn';
-        const toggleText = examiner.disabled ? '✓' : '×';
-        const roomText = roomNumber ? `考场${roomNumber}` : '';
+                const assignedClass = examiner.assigned ? 'assigned' : '';
+                const disabledClass = examiner.disabled ? 'disabled' : '';
+                const toggleClass = examiner.disabled ? 'enable-btn' : 'disable-btn';
+                const toggleText = examiner.disabled ? '✓' : '×';
+                const roomText = roomNumber ? `考场${roomNumber}` : '';
 
-        html += `
-            <div class="examiner-item ${assignedClass} ${disabledClass}"
-                 data-id="${examiner.id}"
-                 ondragstart="${examiner.disabled ? '' : 'dragExaminerStart(event)'}"
-                 ${examiner.disabled ? '' : 'draggable="true"'}>
-                <button class="examiner-toggle-btn ${toggleClass}"
-                        onclick="toggleExaminerStatus(event, ${examiner.id})">
-                    ${toggleText}
-                </button>
-                ${roomText ? `<span class="examiner-room-number">${roomText}</span>` : ''}
-                <div class="examiner-main">
-                    <div class="examiner-name">${examiner.name} (${examiner.gender})</div>
-                    <div class="examiner-subject-badge">${examiner.subject}</div>
-                </div>
-                <div class="examiner-details">
-                    <div>${examiner.school}</div>
-                    <div>${examiner.phone} | ${examiner.period}期</div>
-                </div>
-            </div>
-        `;
-    });
+                html += `
+                    <div class="examiner-item ${assignedClass} ${disabledClass}"
+                         data-id="${examiner.id}"
+                         ondragstart="${examiner.disabled ? '' : 'dragExaminerStart(event)'}"
+                         ${examiner.disabled ? '' : 'draggable="true"'}>
+                        <button class="examiner-toggle-btn ${toggleClass}"
+                                onclick="toggleExaminerStatus(event, ${examiner.id})">
+                            ${toggleText}
+                        </button>
+                        ${roomText ? `<span class="examiner-room-number">${roomText}</span>` : ''}
+                        <div class="examiner-main">
+                            <div class="examiner-name">${examiner.name} (${examiner.gender})</div>
+                            <div class="examiner-subject-badge">${examiner.subject}</div>
+                        </div>
+                        <div class="examiner-details">
+                            <div>${examiner.school}</div>
+                            <div>${examiner.phone} | ${examiner.period}期</div>
+                        </div>
+                    </div>
+                `;
+            });
 
-    examinerList.innerHTML = html;
-}
+            examinerList.innerHTML = html;
+        }
         
         function toggleExaminerStatus(event, examinerId) {
             event.stopPropagation();
@@ -965,22 +958,68 @@
         function getExaminerById(id) { return examiners.find(e => e.id === id); }
         
         function initExamTable(count) {
-            examRooms = []; examTableBody.innerHTML = '';
+            // ✅ 考场数量减少时，清理多余考场中的考官
+            if (count < examRooms.length) {
+                examRooms.slice(count).forEach(room => {
+                    room.examiners.forEach(id => {
+                        if (id) {
+                            const ex = getExaminerById(id);
+                            if (ex) {
+                                ex.assigned = false;
+                                ex.assignedRoom = null;
+                            }
+                        }
+                    });
+                });
+                examRooms = examRooms.slice(0, count);
+            }
+
+            examRooms = [];
+            examTableBody.innerHTML = '';
+
             for (let i = 1; i <= count; i++) {
                 examRooms.push({ id: i, examiners: [null, null, null] });
                 const row = document.createElement('tr');
                 row.setAttribute('data-room-id', i);
                 row.setAttribute('ondragover', 'allowRowDrop(event)');
                 row.setAttribute('ondrop', 'dropRow(event)');
-                const roomCell = document.createElement('td'); roomCell.className = 'col-room'; roomCell.textContent = i; roomCell.setAttribute('draggable', 'true'); roomCell.setAttribute('ondragstart', 'dragRoomStart(event)'); row.appendChild(roomCell);
-                const countCell = document.createElement('td'); countCell.className = 'col-count'; countCell.innerHTML = subjectCounts[i] || '-'; countCell.setAttribute('draggable', 'true'); countCell.setAttribute('ondragstart', 'dragRoomStart(event)'); row.appendChild(countCell);
+
+                const roomCell = document.createElement('td');
+                roomCell.className = 'col-room';
+                roomCell.textContent = i;
+                roomCell.setAttribute('draggable', 'true');
+                roomCell.setAttribute('ondragstart', 'dragRoomStart(event)');
+                row.appendChild(roomCell);
+
+                const countCell = document.createElement('td');
+                countCell.className = 'col-count';
+                countCell.innerHTML = subjectCounts[i] || '-';
+                countCell.setAttribute('draggable', 'true');
+                countCell.setAttribute('ondragstart', 'dragRoomStart(event)');
+                row.appendChild(countCell);
+
                 for (let j = 0; j < 3; j++) {
-                    const teacherCell = document.createElement('td'); teacherCell.className = 'col-teacher';
-                    const dz = document.createElement('div'); dz.className = 'teacher-drop-zone empty'; dz.setAttribute('ondrop', 'dropExaminer(event)'); dz.setAttribute('ondragover', 'allowDrop(event)'); dz.setAttribute('data-room-id', i); dz.setAttribute('data-slot-index', j); dz.textContent = '拖拽考官到此'; teacherCell.appendChild(dz); row.appendChild(teacherCell);
-                    const subjectCell = document.createElement('td'); subjectCell.className = 'col-subject'; subjectCell.textContent = '-'; row.appendChild(subjectCell);
+                    const teacherCell = document.createElement('td');
+                    teacherCell.className = 'col-teacher';
+                    const dz = document.createElement('div');
+                    dz.className = 'teacher-drop-zone empty';
+                    dz.setAttribute('ondrop', 'dropExaminer(event)');
+                    dz.setAttribute('ondragover', 'allowDrop(event)');
+                    dz.setAttribute('data-room-id', i);
+                    dz.setAttribute('data-slot-index', j);
+                    dz.textContent = '拖拽考官到此';
+                    teacherCell.appendChild(dz);
+                    row.appendChild(teacherCell);
+
+                    const subjectCell = document.createElement('td');
+                    subjectCell.className = 'col-subject';
+                    subjectCell.textContent = '-';
+                    row.appendChild(subjectCell);
                 }
+
                 examTableBody.appendChild(row);
             }
+
             currentRoomCount = count;
         }
         
@@ -995,11 +1034,18 @@
                     const subjectCell = row.cells[3 + i * 2];
                     if (examinerId) {
                         const examiner = getExaminerById(examinerId);
-                        dz.className = 'teacher-drop-zone filled'; dz.setAttribute('draggable', 'true'); dz.setAttribute('ondragstart', 'dragExaminerStart(event)'); dz.setAttribute('data-examiner-id', examinerId);
+                        dz.className = 'teacher-drop-zone filled';
+                        dz.setAttribute('draggable', 'true');
+                        dz.setAttribute('ondragstart', 'dragExaminerStart(event)');
+                        dz.setAttribute('data-examiner-id', examinerId);
                         dz.innerHTML = `<div class="teacher-info"><div class="teacher-name">${examiner.name}</div><div class="teacher-school">${examiner.school}</div></div><button class="teacher-delete-btn" onclick="deleteExaminerFromCell(event, this)">×</button>`;
                         subjectCell.textContent = examiner.subject;
                     } else {
-                        dz.className = 'teacher-drop-zone empty'; dz.removeAttribute('draggable'); dz.removeAttribute('data-examiner-id'); dz.innerHTML = '拖拽考官到此'; subjectCell.textContent = '-';
+                        dz.className = 'teacher-drop-zone empty';
+                        dz.removeAttribute('draggable');
+                        dz.removeAttribute('data-examiner-id');
+                        dz.innerHTML = '拖拽考官到此';
+                        subjectCell.textContent = '-';
                     }
                 }
             });
@@ -1007,31 +1053,30 @@
         }
         
         function deleteExaminerFromCell(event, btn) {
-    event.stopPropagation();
-    event.preventDefault();
+            event.stopPropagation();
+            event.preventDefault();
 
-    // ✅ 从 drop-zone 取 examiner-id
-    const dropZone = btn.closest('.teacher-drop-zone');
-    if (!dropZone) return;
+            const dropZone = btn.closest('.teacher-drop-zone');
+            if (!dropZone) return;
 
-    const id = parseInt(dropZone.getAttribute('data-examiner-id'));
-    if (!id) return;
+            const id = parseInt(dropZone.getAttribute('data-examiner-id'));
+            if (!id) return;
 
-    if (confirm('确定要删除此考官吗？')) {
-        examRooms.forEach(room => {
-            const idx = room.examiners.indexOf(id);
-            if (idx !== -1) room.examiners[idx] = null;
-        });
+            if (confirm('确定要删除此考官吗？')) {
+                examRooms.forEach(room => {
+                    const idx = room.examiners.indexOf(id);
+                    if (idx !== -1) room.examiners[idx] = null;
+                });
 
-        const examiner = getExaminerById(id);
-        if (examiner) {
-            examiner.assigned = false;
-            examiner.assignedRoom = null;
+                const examiner = getExaminerById(id);
+                if (examiner) {
+                    examiner.assigned = false;
+                    examiner.assignedRoom = null;
+                }
+
+                refreshAllUI();
+            }
         }
-
-        refreshAllUI();
-    }
-}
         
         function clearAllAssignments() {
             if (!confirm('确定要清空所有考场的编排吗？此操作不可撤销。')) return;
@@ -1043,7 +1088,8 @@
         function clearExaminers() {
             if (examiners.length === 0) return alert('考官信息库已为空！');
             if (!confirm('确定要清空所有考官信息吗？')) return;
-            examiners = []; nextExaminerId = 1;
+            examiners = [];
+            nextExaminerId = 1;
             examRooms.forEach(room => room.examiners.fill(null));
             refreshAllUI();
             alert('考官信息库已清空！');
@@ -1061,150 +1107,431 @@
             const data = { examiners, examRooms, subjectCounts, backupTime: new Date().toLocaleString('zh-CN') };
             lastBackupData = data;
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `考官编排备份_${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `考官编排备份_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
             alert('数据备份成功！');
         }
         
         function restoreBackupData() {
-            if (!lastBackupData) { if (confirm('没有找到内存备份，是否从文件还原？')) fileInputRestore.click(); return; }
-            if (confirm('确定要还原备份吗？当前修改将丢失。')) { restoreDataFromObject(lastBackupData); alert('还原成功！'); }
+            if (!lastBackupData) {
+                if (confirm('没有找到内存备份，是否从文件还原？')) fileInputRestore.click();
+                return;
+            }
+            if (confirm('确定要还原备份吗？当前修改将丢失。')) {
+                restoreDataFromObject(lastBackupData);
+                alert('还原成功！');
+            }
         }
         
         function restoreBackupFromFile(file) {
-            const reader = new FileReader(); reader.onload = e => { try { restoreDataFromObject(JSON.parse(e.target.result)); alert('文件还原成功！'); } catch { alert('文件格式错误'); } }; reader.readAsText(file);
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    restoreDataFromObject(JSON.parse(e.target.result));
+                    alert('文件还原成功！');
+                } catch {
+                    alert('文件格式错误');
+                }
+            };
+            reader.readAsText(file);
         }
         
         function restoreDataFromObject(data) {
-            examiners = data.examiners || []; examRooms = data.examRooms || []; subjectCounts = data.subjectCounts || {};
+            examiners = data.examiners || [];
+            examRooms = data.examRooms || [];
+            subjectCounts = data.subjectCounts || {};
             if (examiners.length) nextExaminerId = Math.max(...examiners.map(e => e.id)) + 1;
             refreshAllUI();
-            if (examRooms.length) { currentRoomCount = examRooms.length; roomCountInput.value = currentRoomCount; rebuildExamTable(); } else { initExamTable(currentRoomCount); }
+            if (examRooms.length) {
+                currentRoomCount = examRooms.length;
+                roomCountInput.value = currentRoomCount;
+                rebuildExamTable();
+            } else {
+                initExamTable(currentRoomCount);
+            }
             isDataModified = false;
         }
         
-       function dragExaminerStart(event) {
-    event.stopPropagation();
+        function dragExaminerStart(event) {
+            event.stopPropagation();
 
-    // ✅ 情况 1：从安排表中拖拽「已编排考官」
-    const filledDropZone = event.target.closest('.teacher-drop-zone.filled');
-    if (filledDropZone) {
-        const examinerId = filledDropZone.getAttribute('data-examiner-id');
-        const examiner = getExaminerById(+examinerId);
+            const filledDropZone = event.target.closest('.teacher-drop-zone.filled');
+            if (filledDropZone) {
+                const examinerId = filledDropZone.getAttribute('data-examiner-id');
+                const examiner = getExaminerById(+examinerId);
 
-        if (!examiner || examiner.disabled) {
+                if (!examiner || examiner.disabled) {
+                    event.preventDefault();
+                    return;
+                }
+
+                event.dataTransfer.setData('examinerId', examinerId);
+                event.dataTransfer.setData('dragType', 'examiner');
+                event.dataTransfer.setData('sourceRoomId', filledDropZone.getAttribute('data-room-id'));
+                event.dataTransfer.setData('sourceSlotIndex', filledDropZone.getAttribute('data-slot-index'));
+
+                filledDropZone.classList.add('dragging');
+                return;
+            }
+
+            const examinerItem = event.target.closest('.examiner-item');
+            if (examinerItem && !examinerItem.classList.contains('assigned')) {
+                const examinerId = examinerItem.getAttribute('data-id');
+                const examiner = getExaminerById(+examinerId);
+
+                if (!examiner || examiner.disabled) {
+                    event.preventDefault();
+                    return;
+                }
+
+                event.dataTransfer.setData('examinerId', examinerId);
+                event.dataTransfer.setData('dragType', 'examiner');
+
+                examinerItem.classList.add('dragging');
+                return;
+            }
+
             event.preventDefault();
-            return;
         }
-
-        event.dataTransfer.setData('examinerId', examinerId);
-        event.dataTransfer.setData('dragType', 'examiner');
-        event.dataTransfer.setData('sourceRoomId', filledDropZone.getAttribute('data-room-id'));
-        event.dataTransfer.setData('sourceSlotIndex', filledDropZone.getAttribute('data-slot-index'));
-
-        filledDropZone.classList.add('dragging');
-        return;
-    }
-
-    // ✅ 情况 2：从右侧考官库拖拽「未编排考官」
-    const examinerItem = event.target.closest('.examiner-item');
-    if (examinerItem && !examinerItem.classList.contains('assigned')) {
-        const examinerId = examinerItem.getAttribute('data-id');
-        const examiner = getExaminerById(+examinerId);
-
-        if (!examiner || examiner.disabled) {
-            event.preventDefault();
-            return;
-        }
-
-        event.dataTransfer.setData('examinerId', examinerId);
-        event.dataTransfer.setData('dragType', 'examiner');
-
-        examinerItem.classList.add('dragging');
-        return;
-    }
-
-    // ❌ 其他情况一律禁止
-    event.preventDefault();
-}
         
         function dragRoomStart(event) {
             const cell = event.target;
             if (!cell.classList.contains('col-room') && !cell.classList.contains('col-count')) return;
             const row = cell.closest('tr');
-            if (row) { event.dataTransfer.setData('roomId', row.getAttribute('data-room-id')); event.dataTransfer.setData('dragType', 'room'); row.style.opacity = '0.5'; }
+            if (row) {
+                event.dataTransfer.setData('roomId', row.getAttribute('data-room-id'));
+                event.dataTransfer.setData('dragType', 'room');
+                row.style.opacity = '0.5';
+            }
         }
         
         function allowDrop(event) { event.preventDefault(); const dz = event.target.closest('.teacher-drop-zone'); if (dz) dz.classList.add('drop-zone-hover'); }
         function allowRowDrop(event) { event.preventDefault(); if (event.dataTransfer.getData('dragType') === 'room') { const row = event.target.closest('tr'); if (row) row.classList.add('row-drop-zone-hover'); } }
-        function removeHoverEffects() { document.querySelectorAll('.drop-zone-hover').forEach(e => e.classList.remove('drop-zone-hover')); document.querySelectorAll('.row-drop-zone-hover').forEach(e => e.classList.remove('row-drop-zone-hover')); document.querySelectorAll('#exam-table-body tr').forEach(r => r.style.opacity = ''); document.querySelectorAll('.dragging').forEach(e => e.classList.remove('dragging')); }
+        
+        function removeHoverEffects() {
+            document.querySelectorAll('.drop-zone-hover').forEach(e => e.classList.remove('drop-zone-hover'));
+            document.querySelectorAll('.row-drop-zone-hover').forEach(e => e.classList.remove('row-drop-zone-hover'));
+            document.querySelectorAll('#exam-table-body tr').forEach(r => r.style.opacity = '');
+            document.querySelectorAll('.dragging').forEach(e => e.classList.remove('dragging'));
+        }
+
+        // ✅ 防止拖拽移出浏览器窗口后状态残留
+        document.addEventListener('mouseleave', removeHoverEffects);
         
         function dropExaminer(event) {
-            event.preventDefault(); removeHoverEffects();
-            const dz = event.target.closest('.teacher-drop-zone'); if (!dz) return;
-            const examinerId = +event.dataTransfer.getData('examinerId'); const dragType = event.dataTransfer.getData('dragType');
+            event.preventDefault();
+            removeHoverEffects();
+
+            const dz = event.target.closest('.teacher-drop-zone');
+            if (!dz) return;
+
+            const srcRoomId = +event.dataTransfer.getData('sourceRoomId');
+            const srcSlot = +event.dataTransfer.getData('sourceSlotIndex');
+            const targetRoomId = +dz.getAttribute('data-room-id');
+            const targetSlot = +dz.getAttribute('data-slot-index');
+
+            // ✅ 同考场同位置直接返回
+            if (
+                srcRoomId &&
+                srcRoomId === targetRoomId &&
+                srcSlot === targetSlot
+            ) return;
+
+            const examinerId = +event.dataTransfer.getData('examinerId');
+            const dragType = event.dataTransfer.getData('dragType');
             if (dragType !== 'examiner' || !examinerId) return;
-            const targetRoomId = +dz.getAttribute('data-room-id'); const targetSlot = +dz.getAttribute('data-slot-index');
-            const examiner = getExaminerById(examinerId); if (!examiner || examiner.disabled) return;
-            const targetRoom = examRooms.find(r => r.id === targetRoomId); if (!targetRoom) return;
-            const srcRoomId = +event.dataTransfer.getData('sourceRoomId'); const srcSlot = +event.dataTransfer.getData('sourceSlotIndex');
-            if (isNaN(srcRoomId)) { examRooms.forEach(r => { const idx = r.examiners.indexOf(examinerId); if (idx !== -1) r.examiners[idx] = null; }); }
-            else { const srcRoom = examRooms.find(r => r.id === srcRoomId); if (srcRoom) { const otherId = targetRoom.examiners[targetSlot]; srcRoom.examiners[srcSlot] = otherId; if (otherId) { const other = getExaminerById(otherId); if (other) other.assignedRoom = srcRoomId; } } }
-            targetRoom.examiners[targetSlot] = examinerId; examiner.assigned = true; examiner.assignedRoom = targetRoomId;
+
+            const examiner = getExaminerById(examinerId);
+            if (!examiner || examiner.disabled) return;
+
+            const targetRoom = examRooms.find(r => r.id === targetRoomId);
+            if (!targetRoom) return;
+
+            if (isNaN(srcRoomId)) {
+                examRooms.forEach(r => {
+                    const idx = r.examiners.indexOf(examinerId);
+                    if (idx !== -1) r.examiners[idx] = null;
+                });
+            } else {
+                const srcRoom = examRooms.find(r => r.id === srcRoomId);
+                if (srcRoom) {
+                    const otherId = targetRoom.examiners[targetSlot];
+                    srcRoom.examiners[srcSlot] = otherId;
+                    if (otherId) {
+                        const other = getExaminerById(otherId);
+                        if (other) other.assignedRoom = srcRoomId;
+                    }
+                }
+            }
+
+            targetRoom.examiners[targetSlot] = examinerId;
+            examiner.assigned = true;
+            examiner.assignedRoom = targetRoomId;
+
             refreshAllUI();
         }
         
         function dropRow(event) {
-            event.preventDefault(); removeHoverEffects();
-            const targetRow = event.target.closest('tr'); if (!targetRow || event.dataTransfer.getData('dragType') !== 'room') return;
-            const srcId = +event.dataTransfer.getData('roomId'); const tgtId = +targetRow.getAttribute('data-room-id'); if (!srcId || srcId === tgtId) return;
-            const srcIdx = examRooms.findIndex(r => r.id === srcId); const tgtIdx = examRooms.findIndex(r => r.id === tgtId);
- if (srcIdx === -1 || tgtIdx === -1) return;
-            [examRooms[srcIdx], examRooms[tgtIdx]] =
-[examRooms[tgtIdx], examRooms[srcIdx]];
+            event.preventDefault();
+            removeHoverEffects();
 
-[examRooms[srcIdx].examiners, examRooms[tgtIdx].examiners] =
-[examRooms[tgtIdx].examiners, examRooms[srcIdx].examiners];
+            const targetRow = event.target.closest('tr');
+            if (!targetRow || event.dataTransfer.getData('dragType') !== 'room') return;
 
-[subjectCounts[srcId], subjectCounts[tgtId]] =
-[subjectCounts[tgtId], subjectCounts[srcId]];
-            rebuildExamTable(); updateAllAssignedRoomNumbers(); markDataModified();
+            const srcId = +event.dataTransfer.getData('roomId');
+            const tgtId = +targetRow.getAttribute('data-room-id');
+            if (!srcId || srcId === tgtId) return;
+
+            const srcIdx = examRooms.findIndex(r => r.id === srcId);
+            const tgtIdx = examRooms.findIndex(r => r.id === tgtId);
+            if (srcIdx === -1 || tgtIdx === -1) return;
+
+            [examRooms[srcIdx], examRooms[tgtIdx]] = [examRooms[tgtIdx], examRooms[srcIdx]];
+            [examRooms[srcIdx].examiners, examRooms[tgtIdx].examiners] = [examRooms[tgtIdx].examiners, examRooms[srcIdx].examiners];
+            [subjectCounts[srcId], subjectCounts[tgtId]] = [subjectCounts[tgtId], subjectCounts[srcId]];
+
+            rebuildExamTable();
+            updateAllAssignedRoomNumbers();
+            markDataModified();
         }
         
-        function updateAllAssignedRoomNumbers() { examiners.forEach(e => e.assignedRoom = findExaminerRoom(e.id)); updateExaminerList(); }
-        function rebuildExamTable() { examRooms.sort((a, b) => a.id - b.id); examTableBody.innerHTML = ''; examRooms.forEach(room => { const row = document.createElement('tr'); row.setAttribute('data-room-id', room.id); row.setAttribute('ondragover', 'allowRowDrop(event)'); row.setAttribute('ondrop', 'dropRow(event)'); const roomCell = document.createElement('td'); roomCell.className = 'col-room'; roomCell.textContent = room.id; roomCell.setAttribute('draggable', 'true'); roomCell.setAttribute('ondragstart', 'dragRoomStart(event)'); row.appendChild(roomCell); const countCell = document.createElement('td'); countCell.className = 'col-count'; countCell.innerHTML = subjectCounts[room.id] || '-'; countCell.setAttribute('draggable', 'true'); countCell.setAttribute('ondragstart', 'dragRoomStart(event)'); row.appendChild(countCell); for (let j = 0; j < 3; j++) { const tc = document.createElement('td'); tc.className = 'col-teacher'; const dz = document.createElement('div'); dz.className = 'teacher-drop-zone empty'; dz.setAttribute('ondrop', 'dropExaminer(event)'); dz.setAttribute('ondragover', 'allowDrop(event)'); dz.setAttribute('data-room-id', room.id); dz.setAttribute('data-slot-index', j); dz.textContent = '拖拽考官到此'; tc.appendChild(dz); row.appendChild(tc); const sc = document.createElement('td'); sc.className = 'col-subject'; sc.textContent = '-'; row.appendChild(sc); } examTableBody.appendChild(row); }); updateExamTable(); }
-        function markDataModified() { isDataModified = true; if (autoSaveEnabled) { autoSaveDot.classList.remove('inactive'); autoSaveText.textContent = '数据已修改，自动保存中...'; clearTimeout(autoSaveTimer); autoSaveTimer = setTimeout(() => { saveToLocalStorage(); isDataModified = false; autoSaveText.textContent = '已自动保存'; setTimeout(() => autoSaveText.textContent = '自动保存已启用', 2000); }, 5000); } }
-        function saveToLocalStorage() { if (!autoSaveEnabled) return; try { localStorage.setItem('examinerArrangementData', JSON.stringify({ examiners, examRooms, subjectCounts, saveTime: new Date().toISOString() })); } catch {} }
-        function loadFromLocalStorage() { try { const d = JSON.parse(localStorage.getItem('examinerArrangementData')); if (d) { restoreDataFromObject(d); return true; } } catch {} return false; }
+        function updateAllAssignedRoomNumbers() {
+            examiners.forEach(e => e.assignedRoom = findExaminerRoom(e.id));
+            updateExaminerList();
+        }
+        
+        function rebuildExamTable() {
+            examRooms.sort((a, b) => a.id - b.id);
+            examTableBody.innerHTML = '';
+            examRooms.forEach(room => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-room-id', room.id);
+                row.setAttribute('ondragover', 'allowRowDrop(event)');
+                row.setAttribute('ondrop', 'dropRow(event)');
+
+                const roomCell = document.createElement('td');
+                roomCell.className = 'col-room';
+                roomCell.textContent = room.id;
+                roomCell.setAttribute('draggable', 'true');
+                roomCell.setAttribute('ondragstart', 'dragRoomStart(event)');
+                row.appendChild(roomCell);
+
+                const countCell = document.createElement('td');
+                countCell.className = 'col-count';
+                countCell.innerHTML = subjectCounts[room.id] || '-';
+                countCell.setAttribute('draggable', 'true');
+                countCell.setAttribute('ondragstart', 'dragRoomStart(event)');
+                row.appendChild(countCell);
+
+                for (let j = 0; j < 3; j++) {
+                    const tc = document.createElement('td');
+                    tc.className = 'col-teacher';
+                    const dz = document.createElement('div');
+                    dz.className = 'teacher-drop-zone empty';
+                    dz.setAttribute('ondrop', 'dropExaminer(event)');
+                    dz.setAttribute('ondragover', 'allowDrop(event)');
+                    dz.setAttribute('data-room-id', room.id);
+                    dz.setAttribute('data-slot-index', j);
+                    dz.textContent = '拖拽考官到此';
+                    tc.appendChild(dz);
+                    row.appendChild(tc);
+
+                    const sc = document.createElement('td');
+                    sc.className = 'col-subject';
+                    sc.textContent = '-';
+                    row.appendChild(sc);
+                }
+
+                examTableBody.appendChild(row);
+            });
+            updateExamTable();
+        }
+        
+        function markDataModified() {
+            isDataModified = true;
+            if (autoSaveEnabled) {
+                autoSaveDot.classList.remove('inactive');
+                autoSaveText.textContent = '数据已修改，自动保存中...';
+                clearTimeout(autoSaveTimer);
+                autoSaveTimer = setTimeout(() => {
+                    saveToLocalStorage();
+                    isDataModified = false;
+                    autoSaveText.textContent = '已自动保存';
+                    setTimeout(() => autoSaveText.textContent = '自动保存已启用', 2000);
+                }, 5000);
+            }
+        }
+        
+        function saveToLocalStorage() {
+            if (!autoSaveEnabled) return;
+            try {
+                localStorage.setItem('examinerArrangementData', JSON.stringify({
+                    examiners,
+                    examRooms,
+                    subjectCounts,
+                    saveTime: new Date().toISOString()
+                }));
+            } catch {}
+        }
+        
+        function loadFromLocalStorage() {
+            try {
+                const d = JSON.parse(localStorage.getItem('examinerArrangementData'));
+                if (d) {
+                    restoreDataFromObject(d);
+                    return true;
+                }
+            } catch {}
+            return false;
+        }
         
         function showExportPreview() {
             if (!examiners.length) return alert('请先导入考官数据！');
             let html = `<h4>预览格式：CSV</h4><div style="overflow:auto;max-height:400px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#f2f2f2;"><th style="border:1px solid #ddd;padding:5px;">考场号</th><th style="border:1px solid #ddd;padding:5px;">学科人数</th><th style="border:1px solid #ddd;padding:5px;">教师姓名1</th><th style="border:1px solid #ddd;padding:5px;">学科1</th><th style="border:1px solid #ddd;padding:5px;">教师姓名2</th><th style="border:1px solid #ddd;padding:5px;">学科2</th><th style="border:1px solid #ddd;padding:5px;">教师姓名3</th><th style="border:1px solid #ddd;padding:5px;">学科3</th></tr></thead><tbody>`;
-            examRooms.forEach(room => { html += `<tr><td style="border:1px solid #ddd;padding:5px;">${room.id}</td><td style="border:1px solid #ddd;padding:5px;">${subjectCounts[room.id]?.replace(/<br>/g,' ') || '-'}</td>`; for (let i = 0; i < 3; i++) { const e = getExaminerById(room.examiners[i]); html += `<td style="border:1px solid #ddd;padding:5px;">${e ? e.name : '-'}</td><td style="border:1px solid #ddd;padding:5px;">${e ? e.subject : '-'}</td>`; } html += '</tr>'; });
-            html += '</tbody></table></div>'; previewContent.innerHTML = html; previewModal.style.display = 'flex';
+            examRooms.forEach(room => {
+                html += `<tr><td style="border:1px solid #ddd;padding:5px;">${room.id}</td><td style="border:1px solid #ddd;padding:5px;">${subjectCounts[room.id]?.replace(/<br>/g,' ') || '-'}</td>`;
+                for (let i = 0; i < 3; i++) {
+                    const e = getExaminerById(room.examiners[i]);
+                    html += `<td style="border:1px solid #ddd;padding:5px;">${e ? e.name : '-'}</td><td style="border:1px solid #ddd;padding:5px;">${e ? e.subject : '-'}</td>`;
+                }
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            previewContent.innerHTML = html;
+            previewModal.style.display = 'flex';
         }
         
-        function exportToCSV() { if (!examiners.length) return alert('请先导入考官数据！'); let csv = '\uFEFF考场号,学科人数,教师姓名1,学科1,教师姓名2,学科2,教师姓名3,学科3\n'; examRooms.forEach(room => { const row = [room.id, subjectCounts[room.id]?.replace(/<br>/g,' ') || '-']; for (let i = 0; i < 3; i++) { const e = getExaminerById(room.examiners[i]); row.push(e ? `"${e.name}"` : '-'); row.push(e ? `"${e.subject}"` : '-'); } csv += row.join(',') + '\n'; }); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })); a.download = `考官编排表_${new Date().toISOString().split('T')[0]}.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a); alert('导出成功！'); }
-        function exportToXLSX() { exportToCSV(); alert('XLSX 暂用 CSV 替代，如需 XLSX 可集成 SheetJS。'); }
-        function exportToTXT() { if (!examiners.length) return alert('请先导入考官数据！'); let txt = '考场号\t学科人数\t教师姓名1\t学科1\t教师姓名2\t学科2\t教师姓名3\t学科3\n'; examRooms.forEach(room => { const row = [room.id, subjectCounts[room.id]?.replace(/<br>/g,' ') || '-']; for (let i = 0; i < 3; i++) { const e = getExaminerById(room.examiners[i]); row.push(e ? e.name : '-'); row.push(e ? e.subject : '-'); } txt += row.join('\t') + '\n'; }); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain;charset=utf-8' })); a.download = `考官编排表_${new Date().toISOString().split('T')[0]}.txt`; document.body.appendChild(a); a.click(); document.body.removeChild(a); alert('导出成功！'); }
+        function exportToCSV() {
+            if (!examiners.length) return alert('请先导入考官数据！');
+            let csv = '\uFEFF考场号,学科人数,教师姓名1,学科1,教师姓名2,学科2,教师姓名3,学科3\n';
+            examRooms.forEach(room => {
+                const row = [room.id, subjectCounts[room.id]?.replace(/<br>/g,' ') || '-'];
+                for (let i = 0; i < 3; i++) {
+                    const e = getExaminerById(room.examiners[i]);
+                    row.push(e ? `"${e.name}"` : '-');
+                    row.push(e ? `"${e.subject}"` : '-');
+                }
+                csv += row.join(',') + '\n';
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+            a.download = `考官编排表_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            alert('导出成功！');
+        }
         
-        function handleExaminerFileImport(file) { const reader = new FileReader(); reader.onload = e => { const newExaminers = parseExaminerFile(e.target.result); if (newExaminers.length) { examiners = newExaminers; nextExaminerId = examiners.length + 1; examRooms.forEach(r => r.examiners.fill(null)); refreshAllUI(); alert(`成功导入 ${examiners.length} 位考官！`); } else { alert('未能解析考官文件，请检查格式。'); } }; reader.readAsText(file, 'UTF-8'); }
-        function handleSubjectCountsFileImport(file) { const reader = new FileReader(); reader.onload = e => { const counts = parseSubjectCountsFile(e.target.result); if (Object.keys(counts).length) { subjectCounts = counts; const max = Math.max(...Object.keys(counts).map(Number)); if (currentRoomCount < max && confirm(`检测到 ${max} 个考场，是否更新？`)) { roomCountInput.value = max; initExamTable(max); } updateExamTable(); alert('学科人数导入成功！'); } else { alert('未能解析学科人数文件。'); } }; reader.readAsText(file, 'UTF-8'); }
+        function exportToXLSX() {
+            exportToCSV();
+            alert('XLSX 暂用 CSV 替代，如需 XLSX 可集成 SheetJS。');
+        }
+        
+        function exportToTXT() {
+            if (!examiners.length) return alert('请先导入考官数据！');
+            let txt = '考场号\t学科人数\t教师姓名1\t学科1\t教师姓名2\t学科2\t教师姓名3\t学科3\n';
+            examRooms.forEach(room => {
+                const row = [room.id, subjectCounts[room.id]?.replace(/<br>/g,' ') || '-'];
+                for (let i = 0; i < 3; i++) {
+                    const e = getExaminerById(room.examiners[i]);
+                    row.push(e ? e.name : '-');
+                    row.push(e ? e.subject : '-');
+                }
+                txt += row.join('\t') + '\n';
+            });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain;charset=utf-8' }));
+            a.download = `考官编排表_${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            alert('导出成功！');
+        }
+        
+        function handleExaminerFileImport(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const newExaminers = parseExaminerFile(e.target.result);
+                if (newExaminers.length) {
+                    examiners = newExaminers;
+                    nextExaminerId = examiners.length + 1;
+                    examRooms.forEach(r => r.examiners.fill(null));
+                    refreshAllUI();
+                    alert(`成功导入 ${examiners.length} 位考官！`);
+                } else {
+                    alert('未能解析考官文件，请检查格式。');
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        function handleSubjectCountsFileImport(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const counts = parseSubjectCountsFile(e.target.result);
+                if (Object.keys(counts).length) {
+                    subjectCounts = counts;
+                    const max = Math.max(...Object.keys(counts).map(Number));
+                    if (currentRoomCount < max && confirm(`检测到 ${max} 个考场，是否更新？`)) {
+                        roomCountInput.value = max;
+                        initExamTable(max);
+                    }
+                    updateExamTable();
+                    alert('学科人数导入成功！');
+                } else {
+                    alert('未能解析学科人数文件。');
+                }
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
         
         // ===== 事件绑定 =====
-        importExaminersBtn.onclick = () => fileInputExaminers.click(); importSubjectCountsBtn.onclick = () => fileInputSubjectCounts.click();
+        importExaminersBtn.onclick = () => fileInputExaminers.click();
+        importSubjectCountsBtn.onclick = () => fileInputSubjectCounts.click();
         fileInputExaminers.onchange = e => { if (e.target.files[0]) handleExaminerFileImport(e.target.files[0]); e.target.value = ''; };
         fileInputSubjectCounts.onchange = e => { if (e.target.files[0]) handleSubjectCountsFileImport(e.target.files[0]); e.target.value = ''; };
         fileInputRestore.onchange = e => { if (e.target.files[0]) restoreBackupFromFile(e.target.files[0]); e.target.value = ''; };
-        backupDataBtn.onclick = backupData; restoreDataBtn.onclick = restoreBackupData; clearExaminersBtn.onclick = clearExaminers; clearSubjectCountsBtn.onclick = clearSubjectCounts;
-        exportCsvBtn.onclick = exportToCSV; exportXlsxBtn.onclick = exportToXLSX; exportTxtBtn.onclick = exportToTXT; previewExportBtn.onclick = showExportPreview;
-        clearAllBtn.onclick = clearAllAssignments; closePreviewBtn.onclick = () => previewModal.style.display = 'none'; previewModal.onclick = e => { if (e.target === previewModal) previewModal.style.display = 'none'; };
-        updateRoomsBtn.onclick = () => { const c = +roomCountInput.value || 68; if (c < 1 || c > 100) return alert('考场数量需在 1–100 之间'); initExamTable(c); };
-        combinedSearch.oninput = updateExaminerList; hideAssignedCheckbox.onchange = updateExaminerList;assignedExaminerSearch.oninput = performAssignedExaminerSearch;
-        document.addEventListener('dragover', e => { if (e.target.closest('.teacher-drop-zone')) allowDrop(e); if (e.target.closest('tr')) allowRowDrop(e); });
-        document.addEventListener('dragleave', removeHoverEffects); document.addEventListener('dragend', removeHoverEffects);
-        autoSaveStatus.onclick = () => { autoSaveEnabled = !autoSaveEnabled; autoSaveDot.classList.toggle('inactive', !autoSaveEnabled); autoSaveText.textContent = autoSaveEnabled ? '自动保存已启用' : '自动保存已禁用'; };
+        backupDataBtn.onclick = backupData;
+        restoreDataBtn.onclick = restoreBackupData;
+        clearExaminersBtn.onclick = clearExaminers;
+        clearSubjectCountsBtn.onclick = clearSubjectCounts;
+        exportCsvBtn.onclick = exportToCSV;
+        exportXlsxBtn.onclick = exportToXLSX;
+        exportTxtBtn.onclick = exportToTXT;
+        previewExportBtn.onclick = showExportPreview;
+        clearAllBtn.onclick = clearAllAssignments;
+        closePreviewBtn.onclick = () => previewModal.style.display = 'none';
+        previewModal.onclick = e => { if (e.target === previewModal) previewModal.style.display = 'none'; };
+        updateRoomsBtn.onclick = () => {
+            const c = +roomCountInput.value || 68;
+            if (c < 1 || c > 100) return alert('考场数量需在 1–100 之间');
+            initExamTable(c);
+        };
+        combinedSearch.oninput = updateExaminerList;
+        hideAssignedCheckbox.onchange = updateExaminerList;
+        assignedExaminerSearch.oninput = performAssignedExaminerSearch;
+        document.addEventListener('dragover', e => {
+            if (e.target.closest('.teacher-drop-zone')) allowDrop(e);
+            if (e.target.closest('tr')) allowRowDrop(e);
+        });
+        document.addEventListener('dragleave', removeHoverEffects);
+        document.addEventListener('dragend', removeHoverEffects);
+        autoSaveStatus.onclick = () => {
+            autoSaveEnabled = !autoSaveEnabled;
+            autoSaveDot.classList.toggle('inactive', !autoSaveEnabled);
+            autoSaveText.textContent = autoSaveEnabled ? '自动保存已启用' : '自动保存已禁用';
+        };
         window.addEventListener('beforeunload', () => { if (isDataModified) saveToLocalStorage(); });
-        document.addEventListener('DOMContentLoaded', () => { if (!loadFromLocalStorage()) { initExamTable(currentRoomCount); } refreshAllUI(); });
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!loadFromLocalStorage()) {
+                initExamTable(currentRoomCount);
+            }
+            refreshAllUI();
+        });
     </script>
 </body>
 </html>
