@@ -587,12 +587,6 @@
                 </div>
                 
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div class="exam-room-control" style="display: flex; align-items: center; gap: 10px;">
-                        <label style="font-weight: 600;">考场数量：</label>
-                        <input type="number" id="room-count" style="width: 80px; padding: 8px;" min="1" max="100" value="68">
-                        <button id="update-rooms" class="btn-small">更新考场</button>
-                    </div>
-                    
                     <div class="auto-save-status" id="auto-save-status">
                         <span class="auto-save-dot inactive" id="auto-save-dot"></span>
                         <span id="auto-save-text">自动保存已禁用</span>
@@ -606,11 +600,11 @@
                         <tr>
                             <th class="col-room">考场号</th>
                             <th class="col-count">学科人数</th>
-                            <th class="col-teacher">教师姓名1</th>
+                            <th class="col-teacher">考官1</th>
                             <th class="col-subject">学科1</th>
-                            <th class="col-teacher">教师姓名2</th>
+                            <th class="col-teacher">考官2</th>
                             <th class="col-subject">学科2</th>
-                            <th class="col-teacher">教师姓名3</th>
+                            <th class="col-teacher">考官3</th>
                             <th class="col-subject">学科3</th>
                         </tr>
                     </thead>
@@ -696,8 +690,6 @@
         const exportTxtBtn = document.getElementById('export-txt');
         const previewExportBtn = document.getElementById('preview-export');
         const clearAllBtn = document.getElementById('clear-all');
-        const roomCountInput = document.getElementById('room-count');
-        const updateRoomsBtn = document.getElementById('update-rooms');
         const hideAssignedCheckbox = document.getElementById('hide-assigned');
         const examinerList = document.getElementById('examiner-list');
         const assignedExaminerSearchResult = document.getElementById('assigned-examiner-search-result');
@@ -1148,7 +1140,6 @@
             refreshAllUI();
             if (examRooms.length) {
                 currentRoomCount = examRooms.length;
-                roomCountInput.value = currentRoomCount;
                 rebuildExamTable();
             } else {
                 initExamTable(currentRoomCount);
@@ -1477,7 +1468,6 @@
                     subjectCounts = counts;
                     const max = Math.max(...Object.keys(counts).map(Number));
                     if (currentRoomCount < max && confirm(`检测到 ${max} 个考场，是否更新？`)) {
-                        roomCountInput.value = max;
                         initExamTable(max);
                     }
                     updateExamTable();
@@ -1506,11 +1496,6 @@
         clearAllBtn.onclick = clearAllAssignments;
         closePreviewBtn.onclick = () => previewModal.style.display = 'none';
         previewModal.onclick = e => { if (e.target === previewModal) previewModal.style.display = 'none'; };
-        updateRoomsBtn.onclick = () => {
-            const c = +roomCountInput.value || 68;
-            if (c < 1 || c > 100) return alert('考场数量需在 1–100 之间');
-            initExamTable(c);
-        };
         combinedSearch.oninput = updateExaminerList;
         hideAssignedCheckbox.onchange = updateExaminerList;
         assignedExaminerSearch.oninput = performAssignedExaminerSearch;
