@@ -412,16 +412,19 @@ function parseSubjectCountsFile(content) {
         line = line.trim();
         if (!line) return;
         const roomNumber = index + 1;
-        const parts = line.split('\t').filter(p => p.trim() !== '');
+        // 按制表符或多个空格分割
+        const parts = line.split(/\t| {2,}/).filter(p => p.trim() !== '');
         let roomCounts = [];
         parts.forEach(part => {
-            // ✅ 修复正则：精确匹配 “12人幼” → m[1]=12, m[2]=幼
-            const m = part.match(/(\d+)人(.+)/);
+            // 匹配“数字+学科简写”（如 50幼）
+            const m = part.match(/^(\d+)([^\d]+)$/);
             if (m) {
-                roomCounts.push(`${m[2].trim()}: ${m[1]}人`);
+                const count = m[1];
+                const subject = m[2].trim();
+                roomCounts.push(`${subject}: ${count}人`);
             }
         });
-        counts[roomNumber] = roomCounts.join('<br>');
+        counts[roomNumber] = roomCounts.length > 0 ? roomCounts.join('<br>') : '';
     });
     return counts;
 }
@@ -878,9 +881,16 @@ function handleSubjectCountsFileImport(file) {
             const max = Math.max(...Object.keys(counts).map(Number));
             initExamTable(max);
             refreshAllUI();
-            alert(`学科人数导入成功！已生成 ${max} 个考场。`);
+            const hasAnySubject = Object.values(subjectCounts).some(v => v && v.trim());
+            if (!hasAnySubject) {
+                alert('学科人数导入完成，但未识别到有效学科信息。\n请确认文件内容格式为“数字+学科简写”（如50幼），并用制表符或空格分隔。');
+            } else {
+                alert(`学科人数导入成功！已生成 ${max} 个考场。`);
+            }
             dataChanged = true;
-        } else { alert('未能解析学科人数文件。'); }
+        } else {
+            alert('未能解析学科人数文件。');
+        }
     };
     reader.readAsText(file, 'UTF-8');
 }
