@@ -331,7 +331,8 @@ function updateAssignedAreaStatistics() {
         { name: '珠山', keyword: '珠山' },
         { name: '昌江', keyword: '昌江' },
         { name: '浮梁', keyword: '浮梁' },
-        { name: '乐平', keyword: '乐平' }
+        { name: '乐平', keyword: '乐平' },
+{ name: '高校', keyword: '省派' }
     ];
     const assigned = examiners.filter(e => e.assigned);
     let html = '';
@@ -348,7 +349,7 @@ function updateAssignedAreaStatistics() {
 function updateCityStats() {
     const container = document.getElementById('city-stats-content');
     if (!container) return;
-    const assigned = examiners.filter(e => e.assigned && e.school && e.school.includes('景德镇'));
+    const assigned = examiners.filter(e => e.assigned && e.school && e.school.includes('景德镇') && !e.school.includes('省派'));
     const schools = [...new Set(assigned.map(e => e.school))].sort();
     let html = '';
     schools.forEach(school => {
