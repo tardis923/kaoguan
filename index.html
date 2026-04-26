@@ -202,14 +202,14 @@ const SUBJECT_MAP = {
 '小德':'小学德语',
 '小法':'小学法语',
 '小西':'小学西班牙语',
-'小政':'小学道德与法治',
+'小政':'小学政治',
 '小数':'小学数学',
 '小科':'小学科学',
 '小音':'小学音乐',
 '小体':'小学体育',
 '小美':'小学美术',
 '小信':'小学信息技术',
-'小心':'小学心理健康教育',
+'小心':'小学心理健康',
 '小全':'小学全科',
 '小特':'小学特殊教育',
 '初语':'初中语文',
@@ -226,16 +226,16 @@ const SUBJECT_MAP = {
 '初物':'初中物理',
 '初化':'初中化学',
 '初生':'初中生物',
-'初政':'初中道德与法治',
+'初政':'初中政治',
 '初历':'初中历史',
 '初地':'初中地理',
 '初音':'初中音乐',
-'初体':'初中体育与健康',
+'初体':'初中体育',
 '初美':'初中美术',
 '初信':'初中信息技术',
 '初历社':'初中历史与社会',
 '初科':'初中科学',
-'初心':'初中心理健康教育',
+'初心':'初中心理健康',
 '初特':'初中特殊教育',
 '高语':'高中语文',
 '高藏':'高中藏语文',
@@ -251,15 +251,15 @@ const SUBJECT_MAP = {
 '高物':'高中物理',
 '高化':'高中化学',
 '高生':'高中生物',
-'高政':'高中思想政治',
+'高政':'高中政治',
 '高历':'高中历史',
 '高地':'高中地理',
 '高音':'高中音乐',
-'高体':'高中体育与健康',
+'高体':'高中体育',
 '高美':'高中美术',
 '高信':'高中信息技术',
 '高通':'高中通用技术',
-'高心':'高中心理健康教育',
+'高心':'高中心理健康',
 '高特':'高中特殊教育',
     // 可按需继续添加，左侧简写，右侧全称
 };
@@ -934,7 +934,6 @@ function autoArrange() {
     if (!examiners.length) { alert('请先导入考官数据！'); return; }
     if (!examRooms.length) { alert('请先导入学科人数生成考场！'); return; }
 
-    // 学科名统一为简写
     function toShortSubject(subject) {
         if (!subject) return '';
         if (SUBJECT_MAP_REVERSE[subject]) return SUBJECT_MAP_REVERSE[subject];
@@ -942,17 +941,16 @@ function autoArrange() {
         return subject;
     }
 
-    // 获取考场前三个学科（简写），返回数组
     function getTopSubjects(roomId) {
         const raw = subjectCounts[roomId] || '';
         const items = raw.split('<br>').filter(s => s.trim());
         const subjects = [];
         items.forEach(item => {
-            const m = item.match(/(.+?):\s*(\d+)人/);
-            if (m) {
-                const short = toShortSubject(m[1].trim());
+            const match = item.match(/(.+?):\s*(\d+)人/);
+            if (match) {
+                const short = toShortSubject(match[1].trim());
                 if (!subjects.find(s => s.name === short)) {
-                    subjects.push({ name: short, count: parseInt(m[2]) });
+                    subjects.push({ name: short, count: parseInt(match[2]) });
                 }
             }
         });
@@ -960,15 +958,14 @@ function autoArrange() {
         return subjects.slice(0, 3).map(s => s.name);
     }
 
-    // 获取考场所有学科（简写），用于宽松匹配
     function getAllSubjects(roomId) {
         const raw = subjectCounts[roomId] || '';
         const items = raw.split('<br>').filter(s => s.trim());
         const result = [];
         items.forEach(item => {
-            const m = item.match(/(.+?):\s*(\d+)人/);
-            if (m) {
-                const short = toShortSubject(m[1].trim());
+            const match = item.match(/(.+?):\s*(\d+)人/);
+            if (match) {
+                const short = toShortSubject(match[1].trim());
                 if (!result.includes(short)) result.push(short);
             }
         });
@@ -976,11 +973,9 @@ function autoArrange() {
     }
 
     try {
-        // 清空现有编排
         examRooms.forEach(room => room.examiners = [null, null, null]);
         examiners.forEach(e => { e.assigned = false; e.assignedRoom = null; });
 
-        // 构建考官池（按简写学科分组，使用原始对象引用）
         const poolBySubject = {};
         examiners.forEach(ex => {
             if (ex.disabled) return;
@@ -989,18 +984,11 @@ function autoArrange() {
             poolBySubject[short].push(ex);
         });
 
-        // 预先计算所有考场的需求位置总数（即每个考场的前三个学科个数之和）
-        let totalSlots = 0;
-        examRooms.forEach(room => {
-            totalSlots += getTopSubjects(room.id).length;
-        });
-
         let totalAssigned = 0;
 
-        // 第一步：按前三个学科严格匹配
+        // 第一轮：按热门学科匹配（无单位限制）
         examRooms.forEach(room => {
             const topSubjects = getTopSubjects(room.id);
-            const assignedUnits = new Set();
             const usedExaminers = new Set();
 
             for (let slot = 0; slot < topSubjects.length; slot++) {
@@ -1011,21 +999,12 @@ function autoArrange() {
                 const available = candidates.filter(ex => !usedExaminers.has(ex.id));
                 if (available.length === 0) continue;
 
-                // 优先不同单位
-                let best = null;
-                for (const ex of available) {
-                    if (!assignedUnits.has(ex.school)) { best = ex; break; }
-                }
-                if (!best) best = available[0];
-
-                // 分配
+                const best = available[0];
                 room.examiners[slot] = best.id;
                 best.assigned = true;
                 best.assignedRoom = room.id;
-                assignedUnits.add(best.school);
                 usedExaminers.add(best.id);
 
-                // 从所有学科池中移除该考官
                 for (const subj in poolBySubject) {
                     const arr = poolBySubject[subj];
                     const idx = arr.findIndex(e => e.id === best.id);
@@ -1035,36 +1014,27 @@ function autoArrange() {
             }
         });
 
-        // 第二步：填充剩余空位（宽松匹配）
+        // 第二轮：仅从与考场学科匹配的剩余考官中填充（无单位限制）
         examRooms.forEach(room => {
             const allSubjects = getAllSubjects(room.id);
-            const assignedUnitsInRoom = new Set();
-            examiners.filter(e => room.examiners.includes(e.id)).forEach(e => assignedUnitsInRoom.add(e.school));
 
             for (let slot = 0; slot < 3; slot++) {
                 if (room.examiners[slot]) continue;
 
-                // 收集剩余所有考官
-                const remaining = [];
-                for (const subj in poolBySubject) {
-                    remaining.push(...poolBySubject[subj]);
+                // 只收集本考场已有学科的考官
+                const relevant = [];
+                for (const subj of allSubjects) {
+                    if (poolBySubject[subj]) {
+                        relevant.push(...poolBySubject[subj]);
+                    }
                 }
-                if (remaining.length === 0) break;
+                if (relevant.length === 0) continue;  // 没有匹配考官就留空
 
-                // 优先级：学科属于该考场已有学科 且 单位未出现
-                let best = remaining.find(ex => allSubjects.includes(toShortSubject(ex.subject)) && !assignedUnitsInRoom.has(ex.school));
-                if (!best) {
-                    best = remaining.find(ex => !assignedUnitsInRoom.has(ex.school));
-                }
-                if (!best) best = remaining[0];
-
-                // 分配
+                const best = relevant[0];
                 room.examiners[slot] = best.id;
                 best.assigned = true;
                 best.assignedRoom = room.id;
-                assignedUnitsInRoom.add(best.school);
 
-                // 从池子移除
                 for (const subj in poolBySubject) {
                     const arr = poolBySubject[subj];
                     const idx = arr.findIndex(e => e.id === best.id);
@@ -1078,10 +1048,10 @@ function autoArrange() {
         dataChanged = true;
 
         if (totalAssigned === 0) {
-    alert('自动编排未能分配任何考官。\n可能原因：考官学科与考场需求学科不匹配，或所有考官均被禁用。');
-} else {
-    alert(`自动编排完成！已成功分配 ${totalAssigned} 名考官。`);
-}
+            alert('自动编排未能分配任何考官。\n可能原因：考官学科与考场需求学科不匹配，或所有考官均被禁用。');
+        } else {
+            alert(`自动编排完成！已成功分配 ${totalAssigned} 名考官。`);
+        }
     } catch (error) {
         console.error(error);
         alert('自动编排执行时发生错误：' + error.message);
